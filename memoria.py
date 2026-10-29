@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import date
 
 MAX_MENSAJES = 20
 def _sistema():
@@ -11,7 +12,7 @@ def _sistema():
 _historial = defaultdict(list)
 
 def obtener(user_id):
-    return [_sistema] + _historial[user_id]
+    return [_sistema()] + _historial[user_id]
 
 def añadir(user_id, role, content):
     _historial[user_id].append({"role": role, "content": content})
