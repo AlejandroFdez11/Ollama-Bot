@@ -1,6 +1,7 @@
 import asyncio
+import json
 import httpx
-from config import OLLAMA_URL, MODEL
+from config import API_KEY, API_URL, MODEL
 from busqueda import buscar_web
 
 TOOLS = [{
@@ -20,28 +21,35 @@ TOOLS = [{
 
 async def chat(messages):
     messages = list(messages)
-    async with httpx.AsyncClient(timeout=300) as client:
+    headers = {"Authorization": f"Bearer {API_KEY}"}
+    async with httpx.AsyncClient(timeout=120) as client:
         for _ in range(4):  # máximo 4 rondas de herramientas
-            r = await client.post(f"{OLLAMA_URL}/api/chat", json={
+            r = await client.post(API_URL, headers=headers, json={
                 "model": MODEL,
                 "messages": messages,
                 "tools": TOOLS,
-                "stream": False,
-                "think": False,
-                "keep_alive": "30m",
             })
-            r.raise_for_status()
-            msg = r.json()["message"]
+            if r.status_code >= 400:
+                raise RuntimeError(f"{r.status_code}: {r.text[:300]}")
+            msg = r.json()["choices"][0]["message"]
             llamadas = msg.get("tool_calls")
             if not llamadas:
-                return msg["content"]
-            messages.append(msg)
+                return msg.get("content") or "Sin respuesta."
+            messages.append({
+                "role": "assistant",
+                "content": msg.get("content") or "",
+                "tool_calls": llamadas,
+            })
             for c in llamadas:
-                args = c["function"]["arguments"]
+                try:
+                    args = json.loads(c["function"]["arguments"] or "{}")
+                except json.JSONDecodeError:
+                    args = {}
                 resultado = await asyncio.to_thread(buscar_web, args.get("consulta", ""))
                 messages.append({
                     "role": "tool",
-                    "tool_name": c["function"]["name"],
+                    "tool_call_id": c["id"],
+                    "name": c["function"]["name"],
                     "content": resultado,
                 })
     return "No pude completar la búsqueda."
