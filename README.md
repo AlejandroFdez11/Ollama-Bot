@@ -1,2 +1,2 @@
 # Ollama-Bot
-Bot de texto plano, conectado con el modelo de ollama por la app de Telegram.
+Bot de Telegram desarrollado en Python que utiliza Ollama para integrar un modelo de IA local (Qwen3.8:latest) y ofrecer conversaciones mediante texto plano directamente desde Telegram.
